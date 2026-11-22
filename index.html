@@ -1,0 +1,695 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Porcos Loucos</title>
+<meta name="theme-color" content="#f39a78">
+<meta name="description" content="Jogo de tabuleiro com porcos loucos: ande, coloque cercas e chegue primeiro ao outro lado.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Porcos Loucos">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@600;800&display=swap">
+<style>
+/* Layout: coluna única de celular. Título, dois placares, tabuleiro 9x9 numa moldura de madeira, controles embaixo. */
+:root {
+  --sky-top: #f39a78;
+  --sky-low: #f9c99b;
+  --grass: #93d150;
+  --grass-dark: #7fc043;
+  --wood: #b8743a;
+  --wood-dark: #7e4a20;
+  --paper: #fff3dc;
+  --ink: #4a2a14;
+  --yellow: #ffd23f;
+  --blue: #3f7be0;
+  --red: #e0443f;
+  --pink-goal: #ffb8c6;
+  --blue-goal: #a9c9f7;
+  --font-display: "Lilita One", "Arial Rounded MT Bold", system-ui, sans-serif;
+  --font-body: "Nunito", system-ui, sans-serif;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { min-height: 100%; }
+html { background: var(--grass-dark); }
+body {
+  margin: 0;
+  background: var(--grass);
+  background-image: linear-gradient(180deg, var(--sky-top) 0, var(--sky-low) 230px, var(--grass) 231px, var(--grass-dark) 100%);
+  background-attachment: scroll;
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-weight: 600;
+  padding-block: 14px 28px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  -webkit-tap-highlight-color: transparent;
+}
+.app { max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; position: relative; }
+.barn { position: absolute; right: -4px; top: 34px; width: 74px; opacity: .95; pointer-events: none; }
+.head { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.pill {
+  background: var(--paper); border: 2px solid var(--wood-dark); border-radius: 999px;
+  padding: 3px 14px; font-weight: 800; font-size: 13px; letter-spacing: .02em;
+}
+h1 {
+  margin: 0; font-family: var(--font-display); font-weight: 400; font-size: clamp(36px, 11vw, 54px);
+  line-height: 1; letter-spacing: .01em; text-transform: uppercase; color: var(--yellow);
+  -webkit-text-stroke: 7px var(--wood-dark); paint-order: stroke fill;
+  text-shadow: 0 5px 0 var(--wood-dark);
+  text-wrap: balance;
+}
+h1 span { color: #fff; }
+
+.scores { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.chip {
+  display: flex; align-items: center; gap: 8px; min-width: 0;
+  background: var(--paper); border: 3px solid var(--wood-dark); border-radius: 14px;
+  padding: 7px 10px; opacity: .72; transition: transform .15s, opacity .15s, box-shadow .15s;
+}
+.chip.on { opacity: 1; transform: translateY(-2px); box-shadow: 0 4px 0 var(--wood-dark); }
+.dot { width: 14px; height: 14px; border-radius: 50%; flex: none; border: 2px solid var(--wood-dark); }
+.chip .nm { font-weight: 800; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chip .ct { margin-left: auto; font-size: 12px; font-weight: 800; white-space: nowrap; display: flex; align-items: center; gap: 4px; }
+.chip .ct i { display: inline-block; width: 4px; height: 14px; border-radius: 2px; background: var(--wood); border: 1px solid var(--wood-dark); }
+
+.frame {
+  background: linear-gradient(180deg, #c98443, var(--wood));
+  border: 4px solid var(--wood-dark); border-radius: 22px; padding: 8px 10px 10px;
+  box-shadow: 0 6px 0 var(--wood-dark), 0 14px 24px rgba(60, 30, 10, .25);
+}
+.banner {
+  display: flex; justify-content: center; align-items: center; gap: 10px;
+  font-family: var(--font-display); font-size: 17px; letter-spacing: .06em; color: #fff7e6;
+  text-shadow: 0 2px 0 var(--wood-dark); padding: 2px 0 6px;
+}
+.banner.bot { padding: 6px 0 0; }
+.flag { width: 22px; height: 14px; border: 2px solid var(--wood-dark); border-radius: 2px; flex: none;
+  background: conic-gradient(#222 25%, #fff 0 50%, #222 0 75%, #fff 0); background-size: 8px 8px; }
+.boardwrap { border-radius: 8px; overflow: hidden; border: 3px solid var(--wood-dark); background: var(--grass); touch-action: manipulation; }
+canvas { display: block; width: 100%; aspect-ratio: 1; touch-action: manipulation; cursor: pointer; }
+
+.status {
+  min-height: 52px; background: var(--paper); border: 3px solid var(--wood-dark); border-radius: 14px;
+  padding: 8px 12px; display: flex; flex-direction: column; justify-content: center; gap: 1px;
+}
+.status b { font-family: var(--font-display); font-weight: 400; font-size: 18px; letter-spacing: .02em; }
+.status small { font-size: 13px; opacity: .85; }
+
+.row { display: flex; gap: 8px; flex-wrap: wrap; }
+.seg { display: grid; grid-template-columns: 1fr 1fr; flex: 1 1 220px; border: 3px solid var(--wood-dark); border-radius: 14px; overflow: hidden; background: var(--paper); }
+button {
+  font: inherit; font-weight: 800; color: var(--ink); cursor: pointer;
+  border: 3px solid var(--wood-dark); background: var(--paper); border-radius: 14px; padding: 10px 12px; min-height: 46px;
+}
+.seg button { border: 0; border-radius: 0; background: transparent; }
+.seg button + button { border-left: 3px solid var(--wood-dark); }
+.seg button[aria-pressed="true"] { background: var(--yellow); }
+.btn-go { background: #7ed957; box-shadow: 0 3px 0 var(--wood-dark); flex: 1 1 140px; }
+.btn-go:disabled { background: #cfd8c4; opacity: .7; box-shadow: none; cursor: not-allowed; }
+.btn-alt { box-shadow: 0 3px 0 var(--wood-dark); flex: 1 1 140px; }
+button:focus-visible { outline: 3px solid #fff; outline-offset: 2px; box-shadow: 0 0 0 6px var(--blue); }
+button:active:not(:disabled) { transform: translateY(2px); }
+
+.online { background: var(--paper); border: 3px solid var(--wood-dark); border-radius: 14px; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+.online[hidden], .online [hidden] { display: none !important; }
+.online input {
+  flex: 1 1 120px; min-width: 0; font: inherit; font-family: var(--font-display); font-size: 22px; letter-spacing: .25em; text-align: center; text-transform: uppercase;
+  color: var(--ink); background: #fff; border: 3px solid var(--wood-dark); border-radius: 14px; padding: 6px 8px; min-height: 46px;
+}
+.online input:focus-visible { outline: 3px solid #fff; box-shadow: 0 0 0 6px var(--blue); }
+.online .code { font-family: var(--font-display); font-size: 34px; letter-spacing: .3em; padding-left: .3em; text-align: center; line-height: 1.1; }
+.online small { font-size: 13px; opacity: .85; text-align: center; }
+.modal { position: fixed; inset: 0; background: rgba(60, 30, 10, .55); display: grid; place-items: center; padding: 20px; z-index: 20; }
+.modal[hidden] { display: none !important; }
+.card {
+  width: min(360px, 100%); background: var(--paper); border: 4px solid var(--wood-dark); border-radius: 22px;
+  padding: 22px 20px 20px; text-align: center; display: flex; flex-direction: column; gap: 10px; align-items: center;
+  box-shadow: 0 8px 0 var(--wood-dark); animation: pop .35s cubic-bezier(.2, 1.6, .4, 1);
+}
+.card h2 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 30px; line-height: 1.05; text-wrap: balance; }
+.card p { margin: 0; font-size: 15px; }
+.card canvas { width: 96px; height: 96px; aspect-ratio: auto; cursor: default; }
+@keyframes pop { from { transform: scale(.6); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .card { animation: none; } .chip { transition: none; } }
+.foot { text-align: center; font-size: 12px; opacity: .8; }
+</style>
+</head>
+<body>
+<script src="config.js"></script>
+<div class="app">
+  <svg class="barn" viewBox="0 0 74 70" aria-hidden="true"><path d="M4 30 37 4l33 26v36H4z" fill="#c8362f" stroke="#7e2420" stroke-width="3" stroke-linejoin="round"/><rect x="24" y="38" width="26" height="28" fill="#a82a25" stroke="#7e2420" stroke-width="3"/><path d="M24 38l26 28M50 38 24 66" stroke="#fff3dc" stroke-width="3"/><rect x="31" y="16" width="12" height="8" fill="#fff3dc" stroke="#7e2420" stroke-width="2"/></svg>
+  <header class="head">
+    <div class="pill">Troca de chiqueiro</div>
+    <h1>Porcos <span>Loucos</span></h1>
+  </header>
+
+  <section class="scores" aria-label="Placar">
+    <div class="chip" id="chip0"><span class="dot" style="background:var(--blue)"></span><span class="nm" id="nm0">Torresmo</span><span class="ct" id="ct0"></span></div>
+    <div class="chip" id="chip1"><span class="dot" style="background:var(--red)"></span><span class="nm" id="nm1">Bacon</span><span class="ct" id="ct1"></span></div>
+  </section>
+
+  <section class="frame">
+    <div class="banner"><span class="flag"></span>CHEGADA<span class="flag"></span></div>
+    <div class="boardwrap"><canvas id="cv" aria-label="Tabuleiro 9 por 9. Torresmo começa embaixo e vai para o alto, Bacon faz o contrário." role="img"></canvas></div>
+    <div class="banner bot"><span class="flag"></span>CHEGADA<span class="flag"></span></div>
+  </section>
+
+  <div class="status" aria-live="polite"><b id="st1">Sua vez, Torresmo!</b><small id="st2">Toque numa casa brilhante para andar.</small></div>
+
+  <div class="online" id="online" hidden>
+    <div id="roomPick" class="online" style="border:0;padding:0">
+      <button id="bCreate" class="btn-go" style="flex:none">Criar sala</button>
+      <div class="row"><input id="code" maxlength="4" placeholder="CÓDIGO" autocomplete="off" autocapitalize="characters" aria-label="Código da sala"><button id="bJoin" class="btn-alt">Entrar</button></div>
+      <small id="onMsg">Crie uma sala e passe o código para o seu amigo, ou digite o código que ele passou.</small>
+    </div>
+    <div id="roomInfo" hidden>
+      <div class="code" id="roomCode" aria-label="Código da sala"></div>
+      <small id="roomHint"></small>
+      <div class="row"><button id="bCopy" class="btn-alt">Convidar amigo</button><button id="bLeave" class="btn-alt">Sair da sala</button></div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="seg" role="group" aria-label="Ação do turno">
+      <button id="bMove" aria-pressed="true">Andar</button>
+      <button id="bWall" aria-pressed="false">Colocar cerca</button>
+    </div>
+    <button id="bOk" class="btn-go" disabled>Confirmar cerca</button>
+  </div>
+  <div class="row">
+    <button id="bMode" class="btn-alt">Contra o Bacon-robô</button>
+    <button id="bNew" class="btn-alt">Novo jogo</button>
+    <button id="bSnd" class="btn-alt" aria-pressed="true">Som ligado</button>
+  </div>
+  <p class="foot">Cada um tem 10 cercas. Você pode atrapalhar o outro, mas nunca fechar o caminho todo. Quem cruzar o tabuleiro primeiro vence. No modo online, a estrela marca o seu porco.</p>
+</div>
+
+<div class="modal" id="modal" hidden>
+  <div class="card" role="dialog" aria-labelledby="mTitle">
+    <canvas id="mpig" width="192" height="192"></canvas>
+    <h2 id="mTitle"></h2>
+    <p id="mSub"></p>
+    <button class="btn-go" id="bAgain" style="width:100%;flex:none">Jogar de novo</button>
+  </div>
+</div>
+
+<script>
+(() => {
+  const N = 9, DIRS = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+  const COL = { blue: "#3f7be0", red: "#e0443f", wood: "#b8743a", woodDark: "#7e4a20" };
+  const NAMES = ["Torresmo", "Bacon"];
+  const $ = id => document.getElementById(id);
+  const cv = $("cv"), ctx = cv.getContext("2d");
+  let S = 400, cell = 44, dpr = 1;
+
+  // ---------- regras ----------
+  const grid = n => Array.from({ length: n }, () => Array(n).fill(0));
+  const newState = () => ({ p: [{ r: 8, c: 4 }, { r: 0, c: 4 }], h: grid(8), v: grid(8), f: [10, 10], turn: 0, moves: 0, winner: -1 });
+  const inb = (r, c) => r >= 0 && r < N && c >= 0 && c < N;
+  function blocked(s, r, c, dr, dc) {
+    const H = (a, b) => a >= 0 && a < 8 && b >= 0 && b < 8 && s.h[a][b];
+    const V = (a, b) => a >= 0 && a < 8 && b >= 0 && b < 8 && s.v[a][b];
+    if (dr === -1) return H(r - 1, c) || H(r - 1, c - 1);
+    if (dr === 1) return H(r, c) || H(r, c - 1);
+    if (dc === 1) return V(r, c) || V(r - 1, c);
+    return V(r, c - 1) || V(r - 1, c - 1);
+  }
+  function legalMoves(s, pl) {
+    const me = s.p[pl], op = s.p[1 - pl], res = [];
+    for (const [dr, dc] of DIRS) {
+      if (blocked(s, me.r, me.c, dr, dc)) continue;
+      const nr = me.r + dr, nc = me.c + dc;
+      if (!inb(nr, nc)) continue;
+      if (nr === op.r && nc === op.c) {
+        const jr = nr + dr, jc = nc + dc;
+        if (inb(jr, jc) && !blocked(s, nr, nc, dr, dc)) res.push({ r: jr, c: jc });
+        else {
+          const perp = dr !== 0 ? [[0, 1], [0, -1]] : [[1, 0], [-1, 0]];
+          for (const [pr, pc] of perp) {
+            if (!blocked(s, nr, nc, pr, pc) && inb(nr + pr, nc + pc)) res.push({ r: nr + pr, c: nc + pc });
+          }
+        }
+      } else res.push({ r: nr, c: nc });
+    }
+    return res;
+  }
+  function dist(s, pl) {
+    const goal = pl === 0 ? 0 : 8, st = s.p[pl];
+    const d = grid(N).map(r => r.fill(-1));
+    const q = [[st.r, st.c]]; d[st.r][st.c] = 0;
+    for (let i = 0; i < q.length; i++) {
+      const [r, c] = q[i];
+      if (r === goal) return d[r][c];
+      for (const [dr, dc] of DIRS) {
+        const nr = r + dr, nc = c + dc;
+        if (!inb(nr, nc) || d[nr][nc] >= 0 || blocked(s, r, c, dr, dc)) continue;
+        d[nr][nc] = d[r][c] + 1; q.push([nr, nc]);
+      }
+    }
+    return Infinity;
+  }
+  function wallFree(s, o, r, c) {
+    if (r < 0 || r > 7 || c < 0 || c > 7) return false;
+    if (o === "h") return !s.h[r][c] && !s.v[r][c] && !(c > 0 && s.h[r][c - 1]) && !(c < 7 && s.h[r][c + 1]);
+    return !s.v[r][c] && !s.h[r][c] && !(r > 0 && s.v[r - 1][c]) && !(r < 7 && s.v[r + 1][c]);
+  }
+  function canWall(s, o, r, c) {
+    if (!wallFree(s, o, r, c)) return false;
+    const a = o === "h" ? s.h : s.v;
+    a[r][c] = 1;
+    const ok = isFinite(dist(s, 0)) && isFinite(dist(s, 1));
+    a[r][c] = 0;
+    return ok;
+  }
+
+  // ---------- IA ----------
+  function aiChoose(s) {
+    const pl = s.turn, op = 1 - pl;
+    if (Math.random() < 0.12) {
+      const m = legalMoves(s, pl); return { t: "move", ...m[Math.floor(Math.random() * m.length)] };
+    }
+    const d0 = dist(s, op);
+    let best = null, bestScore = -1e9;
+    for (const m of legalMoves(s, pl)) {
+      const old = s.p[pl]; s.p[pl] = m;
+      const reached = m.r === (pl === 0 ? 0 : 8);
+      const sc = reached ? 999 : d0 - dist(s, pl) + Math.random() * 0.6;
+      s.p[pl] = old;
+      if (sc > bestScore) { bestScore = sc; best = { t: "move", r: m.r, c: m.c }; }
+    }
+    if (s.f[pl] > 0) {
+      const dm = dist(s, pl);
+      for (const o of ["h", "v"]) for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) {
+        if (!canWall(s, o, r, c)) continue;
+        const a = o === "h" ? s.h : s.v; a[r][c] = 1;
+        const nd0 = dist(s, op), nd1 = dist(s, pl);
+        a[r][c] = 0;
+        const gain = nd0 - d0;
+        if (gain < 1) continue;
+        const sc = (nd0 - nd1) - 1.0 - (nd1 - dm) * 0.5 + Math.random() * 0.6 + (d0 <= 3 ? 1.5 : 0);
+        if (sc > bestScore) { bestScore = sc; best = { t: "wall", o, r, c }; }
+      }
+    }
+    return best;
+  }
+
+  // ---------- estado do jogo ----------
+  let G = newState(), vs = "ai", mode = "move", ghost = null, busy = false, aiTimer = 0;
+  const disp = [{ x: 4, y: 8 }, { x: 4, y: 0 }];
+  const pops = []; const confetti = []; let hint = null;
+
+  const QUIPS = ["Oinc oinc oinc!", "Eu sou um foguete rosa!", "A lama me chama!", "Quem apagou a luz?", "Bacon voador!", "Minha orelha ficou tonta!", "Hi hi hi OINC!", "Cerca? Eu como cerca!", "Estou girando por dentro!"];
+  const quip = () => QUIPS[Math.floor(Math.random() * QUIPS.length)];
+
+  let ac = null, sound = true;
+  function oink(high) {
+    if (!sound) return;
+    try {
+      ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+      if (ac.state === "suspended") ac.resume();
+      const t = ac.currentTime, base = high ? 420 : 210;
+      for (let i = 0; i < 2; i++) {
+        const o = ac.createOscillator(), f = ac.createBiquadFilter(), g = ac.createGain();
+        o.type = "sawtooth"; f.type = "lowpass"; f.frequency.value = 900;
+        const s0 = t + i * 0.13;
+        o.frequency.setValueAtTime(base * (1 + i * 0.15), s0);
+        o.frequency.exponentialRampToValueAtTime(base * 0.55, s0 + 0.11);
+        g.gain.setValueAtTime(0.0001, s0); g.gain.exponentialRampToValueAtTime(0.18, s0 + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, s0 + 0.12);
+        o.connect(f); f.connect(g); g.connect(ac.destination); o.start(s0); o.stop(s0 + 0.14);
+      }
+    } catch (e) { /* sem áudio */ }
+  }
+
+  function setStatus(a, b) { $("st1").textContent = a; $("st2").textContent = b; }
+  function isHumanTurn() {
+    if (G.winner >= 0) return false;
+    if (vs === "online") return !!room && seat === G.turn && oppJoined;
+    return vs === "two" || G.turn === 0;
+  }
+  const nameOf = i => vs === "ai" && i === 1 ? "Bacon-robô" : vs === "online" && i === seat ? `${NAMES[i]} (você)` : NAMES[i];
+
+  // ---------- online (salas no banco compartilhado da página) ----------
+  let db = null, uid = null, room = null, seat = -1, unsub = null, rev = 0, oppJoined = false, pushing = Promise.resolve();
+  const enc = s => JSON.stringify({ p: s.p, h: s.h, v: s.v, f: s.f, turn: s.turn, moves: s.moves, winner: s.winner });
+  const ABC = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const onMsg = t => { $("onMsg").textContent = t; };
+  // Identidade anônima deste aparelho (só serve para saber quem é o jogador 1 e o 2 de uma sala).
+  function clientId() {
+    try {
+      let v = localStorage.getItem("porcos-id");
+      if (!v) { v = "p" + Math.random().toString(36).slice(2, 12) + Date.now().toString(36); localStorage.setItem("porcos-id", v); }
+      return v;
+    } catch (e) { return "p" + Math.random().toString(36).slice(2, 12); }
+  }
+  // Banco de salas sobre a API REST do Firebase Realtime Database, com a mesma interface usada pelo resto do jogo.
+  function makeDb(base) {
+    return { doc(path) {
+      const url = `${base}/${path}.json`;
+      const wrap = v => ({ exists: v !== null && v !== undefined, data: () => v });
+      const send = async (method, d) => {
+        const r = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(d) });
+        if (!r.ok) throw new Error("http " + r.status);
+      };
+      const read = async () => { const r = await fetch(url, { cache: "no-store" }); if (!r.ok) throw new Error("http " + r.status); return r.json(); };
+      return {
+        get: async () => wrap(await read()),
+        set: d => send("PUT", d),
+        update: d => send("PATCH", d),
+        onSnapshot(next, error) {
+          let last, stopped = false, fails = 0, timer = 0;
+          const tick = async () => {
+            if (stopped) return;
+            try {
+              const v = await read(); fails = 0;
+              const j = JSON.stringify(v);
+              if (j !== last) { last = j; next(wrap(v)); }
+            } catch (e) { if (++fails === 4 && error) error(e); }
+            if (!stopped) timer = setTimeout(tick, document.hidden ? 3000 : 900);
+          };
+          tick();
+          return () => { stopped = true; clearTimeout(timer); };
+        }
+      };
+    } };
+  }
+  (async () => {
+    uid = clientId();
+    const base = ((window.PORCOS_CONFIG || {}).firebaseUrl || "").trim().replace(/\/+$/, "");
+    if (base) db = makeDb(base);
+    if (!db) onMsg("O modo online ainda não foi configurado. Siga o passo a passo do arquivo LEIA-ME para ligar o Firebase.");
+    const m = /^#sala-([A-Za-z0-9]{4})$/.exec(location.hash || "");
+    if (m && db && uid) { vs = "online"; reset(); $("code").value = m[1].toUpperCase(); joinRoom(m[1].toUpperCase()); }
+    updateUI();
+  })();
+  function push() {
+    if (vs !== "online" || !room || !db) return;
+    const code = room, body = { s: enc(G), rev: ++rev };
+    pushing = pushing.then(() => db.doc("rooms/" + code).update(body)).catch(() => { setStatus("Sem conexão", "Não consegui enviar a jogada. Tente de novo."); });
+  }
+  function leaveRoom() {
+    if (unsub) { try { unsub(); } catch (e) { /* nada */ } }
+    unsub = null; room = null; seat = -1; oppJoined = false; rev = 0;
+    try { history.replaceState(null, "", location.pathname + location.search); } catch (e) { /* nada */ }
+  }
+  function watch(code) {
+    room = code;
+    try { location.hash = "sala-" + code; } catch (e) { /* nada */ }
+    let first = true, timer = setTimeout(() => onMsg("Demorando para conectar à sala..."), 10000);
+    unsub = db.doc("rooms/" + code).onSnapshot(snap => {
+      clearTimeout(timer);
+      if (!snap.exists) { onMsg("Essa sala não existe mais."); leaveRoom(); updateUI(); return; }
+      const d = snap.data();
+      oppJoined = !!d.p0 && !!d.p1;
+      if (first || d.rev > rev) { first = false; rev = Math.max(rev, d.rev); applyRemote(JSON.parse(d.s)); }
+      updateUI();
+    }, () => { onMsg("Perdi a conexão com a sala."); updateUI(); });
+  }
+  function applyRemote(s) {
+    const prev = G.moves, wasOver = G.winner >= 0;
+    G = Object.assign(newState(), s); ghost = null; mode = "move";
+    if (s.moves > prev) { oink(s.turn === 0); pops.push({ x: G.p[1 - s.turn].c + .5, y: G.p[1 - s.turn].r + .5, t: 0 }); }
+    if (s.winner >= 0 && !wasOver) win(s.winner);
+    else if (s.winner < 0) { $("modal").hidden = true; confetti.length = 0; }
+  }
+  async function createRoom() {
+    if (!db || !uid) return;
+    $("bCreate").disabled = true;
+    try {
+      let code, tries = 0;
+      do { code = Array.from({ length: 4 }, () => ABC[Math.floor(Math.random() * ABC.length)]).join(""); tries++; }
+      while ((await db.doc("rooms/" + code).get()).exists && tries < 8);
+      G = newState(); rev = 1; seat = 0;
+      await db.doc("rooms/" + code).set({ s: enc(G), rev: 1, p0: uid, p1: null });
+      watch(code);
+    } catch (e) { onMsg("Não consegui criar a sala. Confira se você tem acesso de colaborador."); seat = -1; }
+    $("bCreate").disabled = false; updateUI();
+  }
+  async function joinRoom(code) {
+    if (!db || !uid) return;
+    code = (code || "").toUpperCase().trim();
+    if (code.length !== 4) { onMsg("O código tem 4 letras ou números."); return; }
+    try {
+      const snap = await db.doc("rooms/" + code).get();
+      if (!snap.exists) { onMsg("Não achei essa sala. Confira o código."); return; }
+      const d = snap.data();
+      if (d.p0 === uid) seat = 0;
+      else if (d.p1 === uid) seat = 1;
+      else if (!d.p1) { await db.doc("rooms/" + code).update({ p1: uid }); seat = 1; }
+      else { onMsg("Essa sala já tem dois jogadores."); return; }
+      watch(code);
+    } catch (e) { onMsg("Não consegui entrar na sala. Confira se você tem acesso de colaborador."); }
+    updateUI();
+  }
+  $("bCreate").onclick = createRoom;
+  $("bJoin").onclick = () => joinRoom($("code").value);
+  $("code").addEventListener("keydown", e => { if (e.key === "Enter") joinRoom($("code").value); });
+  $("bLeave").onclick = () => { leaveRoom(); reset(); };
+  $("bCopy").onclick = async () => {
+    const link = location.origin + location.pathname + "#sala-" + room;
+    try {
+      if (navigator.share) { await navigator.share({ title: "Porcos Loucos", text: `Vem jogar Porcos Loucos comigo! Código da sala: ${room}`, url: link }); return; }
+    } catch (e) { if (e && e.name === "AbortError") return; }
+    try { await navigator.clipboard.writeText(link); $("roomHint").textContent = "Link copiado! Passe para o seu amigo."; }
+    catch (e) { $("roomHint").textContent = "Copie na mão: " + link; }
+  };
+
+  function updateUI() {
+    $("online").hidden = vs !== "online";
+    $("roomPick").hidden = !!room; $("roomInfo").hidden = !room;
+    if (room) { $("roomCode").textContent = room; if (!/copiado|na mão/.test($("roomHint").textContent) || !oppJoined) $("roomHint").textContent = oppJoined ? `Você é o ${NAMES[seat]}, porco ${seat === 0 ? "azul" : "vermelho"}.` : "Toque em Convidar amigo ou passe esse código."; }
+    const chipName = i => (i === 1 && vs === "ai" ? "Bacon-robô" : NAMES[i]) + (vs === "online" && room && i === seat ? " ★" : "");
+    $("nm0").textContent = chipName(0);
+    $("chip0").classList.toggle("on", G.winner < 0 && G.turn === 0);
+    $("chip1").classList.toggle("on", G.winner < 0 && G.turn === 1);
+    for (const i of [0, 1]) $("ct" + i).innerHTML = `<i></i>${G.f[i]}`;
+    $("bMove").setAttribute("aria-pressed", mode === "move");
+    $("bWall").setAttribute("aria-pressed", mode === "wall");
+    const human = isHumanTurn();
+    $("bMove").disabled = $("bWall").disabled = !human;
+    $("bWall").disabled = !human || G.f[G.turn] === 0;
+    $("bOk").disabled = !(human && mode === "wall" && ghost && ghost.ok);
+    $("bMode").textContent = vs === "ai" ? "Modo: contra o robô" : vs === "two" ? "Modo: dois jogadores" : "Modo: online";
+    $("nm1").textContent = chipName(1);
+    $("bSnd").textContent = sound ? "Som ligado" : "Som desligado";
+    $("bSnd").setAttribute("aria-pressed", sound);
+    if (G.winner >= 0) return;
+    const who = NAMES[G.turn];
+    if (vs === "online" && !room) setStatus("Partida online", "Crie uma sala ou entre com o código de um amigo.");
+    else if (vs === "online" && !oppJoined) setStatus("Esperando seu amigo...", "Assim que ele entrar com o código, a partida começa.");
+    else if (vs === "online" && seat !== G.turn) setStatus(`Vez do ${who}...`, "Espere a jogada do seu amigo.");
+    else if (vs === "ai" && G.turn === 1) setStatus("Bacon-robô está pensando...", "Ele roda os olhos e escolhe uma maluquice.");
+    else if (mode === "move") setStatus(`Sua vez, ${who}!`, "Toque numa casa brilhante para andar.");
+    else setStatus(`${who}, onde vai a cerca?`, ghost ? (ghost.ok ? "Toque de novo ou confirme para fixar." : "Aí não dá: fecharia o caminho ou bate noutra cerca.") : "Toque perto de uma linha do tabuleiro.");
+  }
+
+  function afterAction(msg) {
+    G.moves++;
+    const w = G.p[0].r === 0 ? 0 : G.p[1].r === 8 ? 1 : -1;
+    if (w >= 0) { win(w); push(); return; }
+    G.turn = 1 - G.turn; ghost = null; mode = "move";
+    updateUI(); push();
+    if (vs === "ai" && !isHumanTurn()) scheduleAI();
+  }
+  function doMove(r, c) {
+    const me = G.p[G.turn]; me.r = r; me.c = c; oink(G.turn === 1);
+    pops.push({ x: c + .5, y: r + .5, t: 0 });
+    afterAction(); if (G.winner < 0 && isHumanTurn()) $("st2").textContent = quip();
+  }
+  function doWall(o, r, c) {
+    (o === "h" ? G.h : G.v)[r][c] = G.turn + 1; G.f[G.turn]--; oink(true);
+    afterAction(); if (G.winner < 0 && isHumanTurn()) $("st2").textContent = "Cerca no lugar! " + quip();
+  }
+  function scheduleAI() {
+    busy = true; clearTimeout(aiTimer);
+    aiTimer = setTimeout(() => {
+      busy = false; if (G.winner >= 0 || isHumanTurn()) return;
+      const a = aiChoose(G);
+      if (!a) { const m = legalMoves(G, G.turn)[0]; doMove(m.r, m.c); return; }
+      if (a.t === "move") doMove(a.r, a.c); else doWall(a.o, a.r, a.c);
+    }, 800);
+  }
+  function win(w) {
+    G.winner = w; ghost = null; updateUI();
+    $("chip0").classList.remove("on"); $("chip1").classList.remove("on");
+    const name = nameOf(w);
+    $("mTitle").textContent = vs === "online" ? (w === seat ? "Você chegou primeiro!" : `${NAMES[w]} chegou primeiro!`) : `${name} chegou primeiro!`;
+    $("mSub").textContent = `Partida de ${G.moves} jogadas. ${w === 1 && vs === "ai" ? "O robô enlouqueceu de alegria." : "Esse porco merece um banho de lama."}`;
+    setStatus(`${name} venceu!`, "Toque em Novo jogo para outra rodada.");
+    for (let i = 0; i < 120; i++) confetti.push({ x: Math.random(), y: -Math.random() * .6, vx: (Math.random() - .5) * .006, vy: .004 + Math.random() * .008, r: Math.random() * 6, vr: (Math.random() - .5) * .3, c: ["#ffd23f", "#3f7be0", "#e0443f", "#7ed957", "#ff8fb1"][i % 5] });
+    oink(false); setTimeout(() => oink(true), 300);
+    setTimeout(() => { $("modal").hidden = false; $("bAgain").focus(); }, 900);
+  }
+  function reset() {
+    clearTimeout(aiTimer); G = newState(); mode = "move"; ghost = null; busy = false; confetti.length = 0;
+    disp[0] = { x: 4, y: 8 }; disp[1] = { x: 4, y: 0 };
+    $("modal").hidden = true; updateUI(); push();
+  }
+
+  // ---------- entrada ----------
+  function slotAt(px, py) {
+    const k = Math.round(py / cell), kx = Math.round(px / cell);
+    const dH = Math.abs(py - k * cell), dV = Math.abs(px - kx * cell);
+    let o, r, c;
+    if (dH < dV) { o = "h"; r = k - 1; c = Math.round(px / cell) - 1; }
+    else { o = "v"; c = kx - 1; r = Math.round(py / cell) - 1; }
+    r = Math.max(0, Math.min(7, r)); c = Math.max(0, Math.min(7, c));
+    return { o, r, c, ok: G.f[G.turn] > 0 && canWall(G, o, r, c) };
+  }
+  function pos(e) { const b = cv.getBoundingClientRect(); return [(e.clientX - b.left) * (S / b.width), (e.clientY - b.top) * (S / b.height)]; }
+  cv.addEventListener("pointermove", e => {
+    if (e.pointerType === "touch" || mode !== "wall" || !isHumanTurn()) return;
+    const [x, y] = pos(e); hint = slotAt(x, y);
+  });
+  cv.addEventListener("pointerleave", () => { hint = null; });
+  cv.addEventListener("click", e => {
+    if (!isHumanTurn()) return;
+    const [x, y] = pos(e);
+    if (mode === "move") {
+      const c = Math.floor(x / cell), r = Math.floor(y / cell);
+      if (legalMoves(G, G.turn).some(m => m.r === r && m.c === c)) doMove(r, c);
+    } else {
+      const s = slotAt(x, y);
+      if (ghost && ghost.ok && ghost.o === s.o && ghost.r === s.r && ghost.c === s.c) { doWall(s.o, s.r, s.c); return; }
+      ghost = s; hint = null; updateUI();
+    }
+  });
+  $("bMove").onclick = () => { mode = "move"; ghost = null; updateUI(); };
+  $("bWall").onclick = () => { mode = "wall"; ghost = null; updateUI(); };
+  $("bOk").onclick = () => { if (ghost && ghost.ok) doWall(ghost.o, ghost.r, ghost.c); };
+  $("bNew").onclick = reset;
+  $("bAgain").onclick = reset;
+  $("bMode").onclick = () => {
+    const was = vs;
+    vs = vs === "ai" ? "two" : vs === "two" ? "online" : "ai";
+    if (was === "online") leaveRoom();
+    reset();
+  };
+  $("bSnd").onclick = () => { sound = !sound; updateUI(); if (sound) oink(true); };
+
+  // ---------- desenho ----------
+  function resize() {
+    const w = cv.getBoundingClientRect().width || 400;
+    dpr = Math.min(window.devicePixelRatio || 1, 3); S = w; cell = S / N;
+    cv.width = cv.height = Math.round(S * dpr);
+  }
+  new ResizeObserver(resize).observe(cv); resize();
+
+  function drawPig(g, x, y, s, scarf, t, active, phase) {
+    const w = Math.sin(t * 5 + phase), bob = active ? Math.abs(Math.sin(t * 6 + phase)) * s * .1 : w * s * .02;
+    g.save(); g.translate(x, y - bob); g.rotate(Math.sin(t * 3 + phase) * (active ? .2 : .09));
+    g.fillStyle = "rgba(60,30,10,.22)"; g.beginPath(); g.ellipse(0, s * .45 + bob, s * .36, s * .1, 0, 0, 7); g.fill();
+    const ink = "#8a2f4a", lw = Math.max(2, s * .045);
+    g.lineWidth = lw; g.strokeStyle = ink; g.lineJoin = "round"; g.lineCap = "round";
+    // orelhas moles
+    for (const sd of [-1, 1]) {
+      g.save(); g.translate(sd * s * .27, -s * .32); g.rotate(sd * (.55 + Math.sin(t * 7 + phase + sd) * .35));
+      g.fillStyle = "#ff9db5"; g.beginPath(); g.moveTo(-s * .13, 0); g.quadraticCurveTo(0, -s * .34, s * .13, 0); g.closePath(); g.fill(); g.stroke(); g.restore();
+    }
+    // corpo
+    g.fillStyle = "#ffb6c8"; g.beginPath(); g.ellipse(0, 0, s * .45, s * .41, 0, 0, 7); g.fill(); g.stroke();
+    // topete maluco
+    g.beginPath(); g.moveTo(-s * .04, -s * .4); g.quadraticCurveTo(-s * .12, -s * .58, s * .04, -s * .52); g.quadraticCurveTo(s * .14, -s * .48, s * .08, -s * .42); g.stroke();
+    // cachecol
+    g.fillStyle = scarf; g.beginPath(); g.moveTo(-s * .4, s * .12); g.quadraticCurveTo(0, s * .3, s * .4, s * .12); g.lineTo(s * .38, s * .27); g.quadraticCurveTo(0, s * .45, -s * .38, s * .27); g.closePath(); g.fill(); g.stroke();
+    g.beginPath(); g.moveTo(s * .22, s * .3); g.lineTo(s * .3, s * .5 + w * s * .03); g.lineTo(s * .16, s * .44); g.closePath(); g.fill(); g.stroke();
+    // olhos de espiral, um maior que o outro
+    const eyes = [[-s * .17, -s * .13, s * .15], [s * .17, -s * .1, s * .11]];
+    eyes.forEach(([ex, ey, er], i) => {
+      g.fillStyle = "#fff"; g.beginPath(); g.arc(ex, ey, er, 0, 7); g.fill(); g.stroke();
+      g.save(); g.translate(ex, ey); g.rotate(t * (i ? -6 : 6) + phase); g.lineWidth = Math.max(1.5, s * .028);
+      g.beginPath();
+      for (let a = 0; a < 12.5; a += .25) { const rr = er * .82 * a / 12.5; g.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); }
+      g.stroke(); g.restore(); g.lineWidth = lw;
+    });
+    // focinho
+    g.fillStyle = "#ff8aa6"; g.beginPath(); g.ellipse(0, s * .08, s * .17, s * .12, 0, 0, 7); g.fill(); g.stroke();
+    g.fillStyle = ink; for (const sd of [-1, 1]) { g.beginPath(); g.ellipse(sd * s * .06, s * .08, s * .02, s * .035, 0, 0, 7); g.fill(); }
+    // boca torta e língua
+    g.beginPath(); g.moveTo(-s * .12, s * .23); g.quadraticCurveTo(0, s * .3, s * .14, s * .2); g.stroke();
+    g.fillStyle = "#e5385f"; const tl = s * (.07 + (active ? .05 : .02) * (1 + Math.sin(t * 9 + phase)));
+    g.beginPath(); g.roundRect(s * .02, s * .23, s * .1, tl + s * .05, s * .05); g.fill(); g.stroke();
+    g.restore();
+  }
+
+  function render(ts) {
+    const t = ts / 1000;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, S, S);
+    for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+      ctx.fillStyle = r === 0 ? ((r + c) % 2 ? "#b9d3f9" : "#a6c6f5") : r === 8 ? ((r + c) % 2 ? "#ffc6d2" : "#ffb2c2") : ((r + c) % 2 ? "#9ad75b" : "#8acb4c");
+      ctx.fillRect(c * cell, r * cell, cell + .5, cell + .5);
+    }
+    // dicas de movimento
+    if (isHumanTurn() && mode === "move") {
+      const pul = 0.5 + 0.5 * Math.sin(t * 6);
+      for (const m of legalMoves(G, G.turn)) {
+        ctx.fillStyle = `rgba(255,255,255,${.35 + pul * .3})`; ctx.strokeStyle = "#fff"; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc((m.c + .5) * cell, (m.r + .5) * cell, cell * (.2 + pul * .05), 0, 7); ctx.fill(); ctx.stroke();
+      }
+    }
+    // cercas
+    const drawFence = (o, r, c, owner, alpha, bad) => {
+      ctx.save(); ctx.globalAlpha = alpha;
+      const gap = cell * .08, th = cell * .13;
+      let x1, y1, x2, y2;
+      if (o === "h") { y1 = y2 = (r + 1) * cell; x1 = c * cell + gap; x2 = (c + 2) * cell - gap; }
+      else { x1 = x2 = (c + 1) * cell; y1 = r * cell + gap; y2 = (r + 2) * cell - gap; }
+      ctx.lineCap = "round";
+      ctx.strokeStyle = COL.woodDark; ctx.lineWidth = th + 3; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+      ctx.strokeStyle = bad ? "#e0443f" : COL.wood; ctx.lineWidth = th; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+      const cap = owner === 2 ? COL.red : owner === 1 ? COL.blue : "#fff";
+      for (let i = 0; i < 3; i++) {
+        const px = x1 + (x2 - x1) * i / 2, py = y1 + (y2 - y1) * i / 2;
+        ctx.fillStyle = bad ? "#e0443f" : cap; ctx.strokeStyle = COL.woodDark; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.roundRect(px - th * .75, py - th * .75, th * 1.5, th * 1.5, th * .4); ctx.fill(); ctx.stroke();
+      }
+      ctx.restore();
+    };
+    for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) { if (G.h[r][c]) drawFence("h", r, c, G.h[r][c], 1); if (G.v[r][c]) drawFence("v", r, c, G.v[r][c], 1); }
+    const gh = (mode === "wall" && isHumanTurn()) ? (ghost || hint) : null;
+    if (gh) drawFence(gh.o, gh.r, gh.c, G.turn + 1, .75 + Math.sin(t * 8) * .15, !gh.ok);
+
+    // porcos
+    const order = [0, 1].sort((a, b) => disp[a].y - disp[b].y);
+    for (const i of order) {
+      const tg = G.p[i], d = disp[i];
+      d.x += (tg.c - d.x) * .22; d.y += (tg.r - d.y) * .22;
+      drawPig(ctx, (d.x + .5) * cell, (d.y + .5) * cell, cell * 1.08, i === 0 ? COL.blue : COL.red, t, G.winner < 0 && G.turn === i, i * 2.1);
+    }
+    // marcas de pulo
+    for (let i = pops.length - 1; i >= 0; i--) {
+      const p = pops[i]; p.t += .05; if (p.t > 1) { pops.splice(i, 1); continue; }
+      ctx.strokeStyle = `rgba(255,255,255,${1 - p.t})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(p.x * cell, p.y * cell, cell * (.2 + p.t * .5), 0, 7); ctx.stroke();
+    }
+    // confete
+    for (let i = confetti.length - 1; i >= 0; i--) {
+      const f = confetti[i]; f.x += f.vx; f.y += f.vy; f.r += f.vr;
+      if (f.y > 1.1) { confetti.splice(i, 1); continue; }
+      ctx.save(); ctx.translate(f.x * S, f.y * S); ctx.rotate(f.r); ctx.fillStyle = f.c; ctx.fillRect(-4, -2, 8, 4); ctx.restore();
+    }
+    // porco do modal
+    if (!$("modal").hidden) {
+      const m = $("mpig").getContext("2d"); m.clearRect(0, 0, 192, 192);
+      drawPig(m, 96, 92, 150, G.winner === 1 ? COL.red : COL.blue, t, true, 0);
+    }
+    requestAnimationFrame(render);
+  }
+  requestAnimationFrame(render);
+  updateUI();
+})();
+</script>
+<script>
+if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
+  window.addEventListener("load", () => { navigator.serviceWorker.register("sw.js").catch(() => {}); });
+}
+</script>
+</body>
+</html>
