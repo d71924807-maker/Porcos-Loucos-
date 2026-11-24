@@ -202,6 +202,28 @@ function buildChat() {
   PHRASES.forEach((x, i) => { const b = el('button', '', x); b.onclick = () => { sendChat(12 + i); $('m-chat').hidden = true; }; p.append(b); });
 }
 
+// ---------- cena da capa ----------
+function homeScene(g, w, h, t) {
+  const m = CUR_MAP, cx = w / 2;
+  g.save(); g.translate(cx, h * .52); g.rotate(t * .12);
+  for (let i = 0; i < 14; i++) { g.rotate(TAU / 14); g.fillStyle = 'rgba(255,255,255,.16)'; g.beginPath(); g.moveTo(0, 0); g.lineTo(-w * .07, -w * .8); g.lineTo(w * .07, -w * .8); g.closePath(); g.fill(); }
+  g.restore();
+  const grd = g.createRadialGradient(cx, h * .5, 0, cx, h * .5, w * .5); grd.addColorStop(0, 'rgba(255,255,255,.55)'); grd.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = grd; g.fillRect(0, 0, w, h);
+  // palco: tabuleiro em perspectiva
+  const py = h * .87; g.fillStyle = 'rgba(0,0,0,.22)'; g.beginPath(); g.ellipse(cx, py + 10, w * .44, h * .1, 0, 0, TAU); g.fill();
+  g.fillStyle = m.css.woodDark; g.beginPath(); g.ellipse(cx, py + 6, w * .43, h * .1, 0, 0, TAU); g.fill();
+  g.fillStyle = m.css.wood; g.beginPath(); g.ellipse(cx, py, w * .43, h * .1, 0, 0, TAU); g.fill();
+  g.fillStyle = m.tile[0]; g.beginPath(); g.ellipse(cx, py - 2, w * .39, h * .085, 0, 0, TAU); g.fill();
+  g.save(); g.beginPath(); g.ellipse(cx, py - 2, w * .39, h * .085, 0, 0, TAU); g.clip(); g.fillStyle = m.tile[1];
+  for (let i = -6; i < 7; i++) { if (i % 2) continue; g.beginPath(); g.moveTo(cx + i * w * .07, py - h * .1); g.lineTo(cx + (i + 1) * w * .07, py - h * .1); g.lineTo(cx + (i + 1) * w * .095, py + h * .1); g.lineTo(cx + i * w * .095, py + h * .1); g.fill(); }
+  g.restore();
+  // companheiros
+  const side = (ch, x, ph, flip) => { const l = { ch, o: {} }; drawPig(g, x, h * .7 + Math.sin(t * 2 + ph) * 3, w * .24, l, t, { phase: ph }); };
+  side('bacon', w * .17, 1, 0); side('fofura', w * .83, 2, 1);
+  drawPig(g, cx, h * .58 + Math.abs(Math.sin(t * 2.2)) * -6, w * .44, myLook(), t, { active: Math.sin(t * .8) > .5 });
+  // brilhos
+  for (let i = 0; i < 9; i++) { const a = Math.max(0, Math.sin(t * 2 + i * 2.3)), x = frand(i, 11) * w, y = frand(i, 12) * h * .8, r = 3 + frand(i, 13) * 4 * a; if (a < .1) continue; g.fillStyle = `rgba(255,250,200,${a})`; g.beginPath(); g.moveTo(x, y - r * 2); g.quadraticCurveTo(x, y, x + r * 2, y); g.quadraticCurveTo(x, y, x, y + r * 2); g.quadraticCurveTo(x, y, x - r * 2, y); g.quadraticCurveTo(x, y, x, y - r * 2); g.fill(); }
+}
 // ---------- laço de animação ----------
 let lastTs = 0, lastDraw = 0;
 function frame(ts) {
@@ -211,7 +233,7 @@ function frame(ts) {
   const sg = sky.getContext('2d'); sg.setTransform(sky._d, 0, 0, sky._d, 0, 0); drawSky(sg, innerWidth, T, CUR_MAP, low);
   if (P.set.fx && view.screen !== 'game' && CUR_MAP.weather) { const fg = fx.getContext('2d'); fg.setTransform(fx._d, 0, 0, fx._d, 0, 0); fg.clearRect(0, 0, innerWidth, innerHeight); weatherParticles(fg, innerWidth, innerHeight, T, CUR_MAP.weather, low, .9); }
   const v = view.screen;
-  if (v === 'home') { const cv = $('homePig'), w = cv.clientWidth || 200, g = ctxOf(cv, w, w); drawPig(g, w / 2, w * .55, w * .72, myLook(), T, { active: Math.sin(T * .8) > .6 }); }
+  if (v === 'home') { const cv = $('homePig'), w = cv.clientWidth || 300, h = cv.clientHeight || 250, g = ctxOf(cv, w, h); homeScene(g, w, h, T); }
   else if (v === 'game' && G && G.on) { stepGame(dt); renderGame(); }
   else if (v === 'shop') { const cv = $('shopPig'), w = cv.clientWidth || 130, g = ctxOf(cv, w, w); drawPig(g, w / 2, w * .62, w * .6, shopLook(), T, { active: true }); }
   else if (v === 'maps') { const S = Math.round(clamp(innerWidth - 110, 200, 360)), cv = $('mapCv'); cv.style.width = cv.style.height = S + 'px'; const d = DPR(); if (cv._k !== S + ':' + d) { cv.width = cv.height = Math.round(S * d); cv._k = S + ':' + d; } MV.st.turn = 0; const looks = [myLook(), { ch: 'bacon', o: {} }]; drawBoard(cv.getContext('2d'), S, { map: MAPS[MV.i], st: MV.st, q: 0, t: T, dpr: d, hints: null, ghost: null, disp: MV.st.p.map(p => ({ x: p.c, y: p.r })), looks, fxOn: P.set.fx, low }); }

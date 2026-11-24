@@ -155,8 +155,8 @@ function showResult() {
 
 // ---------- entrada (toque no tabuleiro) ----------
 function boardPoint(e) {
-  const cv = $('board'), r = cv.getBoundingClientRect(), S = r.width, cell = S / 9;
-  let vx = (e.clientX - r.left) / cell, vy = (e.clientY - r.top) / cell;
+  const cv = $('board'), r = cv.getBoundingClientRect(), S = cv.clientWidth, cell = S / 9;
+  let vx = (e.clientX - r.left - cv.clientLeft) / cell, vy = (e.clientY - r.top - cv.clientTop) / cell;
   if (G.sel === 'fence' && e.pointerType === 'touch') vy -= .75;
   return rotPt(vx, vy, (4 - G.q) % 4);
 }

@@ -180,7 +180,7 @@ function drawBoard(g, S, o) {
   // porcos: sempre em pé, na ordem de profundidade da tela
   const vp = [], N2 = st.n; for (let i = 0; i < N2; i++) { const d = o.disp[i]; const [vx, vy] = rotPt(d.x + .5, d.y + .5, q); vp.push({ i, vx, vy }); }
   vp.sort((a, b) => a.vy - b.vy);
-  for (const v of vp) drawPig(g, v.vx * cell, v.vy * cell + cell * .15, cell * .8, o.looks[v.i], t, { ring: SEATS[v.i].color, active: st.winner < 0 && st.turn === v.i, phase: v.i * 1.9, rot: 0 });
+  for (const v of vp) drawPig(g, v.vx * cell, v.vy * cell + cell * .1, cell * .85, o.looks[v.i], t, { ring: SEATS[v.i].color, active: st.winner < 0 && st.turn === v.i, phase: v.i * 1.9, rot: 0 });
   if (o.fxOn !== false && map.weather) weatherParticles(g, S, S, t, map.weather, o.low, .7);
   // pontos voando e balões de chat
   for (const f of (o.floats || [])) { const [fx, fy] = rotPt(f.x, f.y, q), k = f.age; g.save(); g.globalAlpha = Math.max(0, 1 - k * k); g.font = `800 ${Math.round(cell * .38)}px Nunito, sans-serif`; g.textAlign = 'center'; g.lineWidth = 4; g.strokeStyle = 'rgba(60,30,10,.85)'; g.fillStyle = f.color || '#ffe14d'; g.strokeText(f.text, fx * cell, (fy - k * .9) * cell); g.fillText(f.text, fx * cell, (fy - k * .9) * cell); g.restore(); }
