@@ -20,7 +20,7 @@ h3{font-size:16px;margin:10px 0 6px}
 @keyframes sway{50%{transform:rotate(-1deg) translateY(-2px)}}
 .l1{font-size:46px;color:#ff7eb6;-webkit-text-stroke:3px var(--wood-dark);paint-order:stroke fill;text-shadow:0 4px 0 var(--wood-dark)}
 .l2{font-size:58px;color:#ffe14d;-webkit-text-stroke:3px var(--wood-dark);paint-order:stroke fill;text-shadow:0 5px 0 var(--wood-dark)}
-.homepig{width:100%;max-width:340px;height:250px;align-self:center;margin:-4px 0 -6px}
+.homepig{flex:none;width:100%;max-width:340px;height:230px;align-self:center;margin:-4px 0 -6px}
 .rankbar{position:relative;height:22px;background:rgba(0,0,0,.25);border-radius:12px;overflow:hidden;border:2px solid var(--wood-dark);margin:0 20px}
 .rankfill{position:absolute;inset:0 auto 0 0;background:linear-gradient(#ffe14d,#f1a81c);width:0}
 .rankbar span{position:relative;display:block;text-align:center;font-size:12px;line-height:18px;color:#3a2410}
@@ -103,8 +103,32 @@ input[type=range]{width:150px;accent-color:var(--wood)}
 .rlines{font-size:14px;text-align:left}.rlines div{display:flex;justify-content:space-between}
 .rrew{font-size:18px;font-family:'Baloo 2'}
 #toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);z-index:50;background:#3a2410;color:#fff;border-radius:20px;padding:10px 18px;font-size:15px;max-width:90%;text-align:center}
-@media (max-height:700px){.logo .l1{font-size:36px}.logo .l2{font-size:44px}.homepig{width:100%;max-width:340px;height:250px;align-self:center;margin:-4px 0 -6px}}
+@media (max-height:700px){.logo .l1{font-size:36px}.logo .l2{font-size:44px}.homepig{flex:none;width:100%;max-width:340px;height:230px;align-self:center;margin:-4px 0 -6px}}
 
 #board,#mapCv,#howCv{box-sizing:content-box}
 
 .btn.big#bPlay{font-size:26px;padding:14px;animation:pulse 1.8s infinite;box-shadow:0 0 0 4px rgba(255,255,255,.35)}
+
+.badge{position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:#e0443f;border:2px solid #fff}
+.btn.event{background:linear-gradient(110deg,#7b2ff7,#f107a3,#ffb347,#7b2ff7);background-size:300% 100%;border-color:#4a1a7a;animation:ev 5s linear infinite;display:flex;flex-direction:column;align-items:center;gap:0;padding:8px}
+.btn.event small{font-size:12px;opacity:.95}
+@keyframes ev{to{background-position:300% 0}}
+.grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;padding-bottom:14px}
+.node{position:relative;font:inherit;font-size:18px;color:var(--ink);background:var(--paper);border:3px solid var(--wood-dark);border-bottom-width:6px;border-radius:14px;padding:8px 0 4px;min-height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1}
+.node small{font-size:10px;letter-spacing:-1px;min-height:12px}
+.node.boss{background:linear-gradient(#ffe14d,#f1a81c);border-color:#7a4b00}
+.node.lock{filter:grayscale(1);opacity:.55}
+.node.cur{box-shadow:0 0 0 3px #3f7be0;animation:pulse 1.2s infinite}
+.world{font-family:'Baloo 2';font-size:18px;margin:12px 0 6px;color:var(--on-bg);text-shadow:0 1px 0 rgba(255,255,255,.4)}
+.mrow{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:2px dashed rgba(0,0,0,.12)}.mrow:last-child{border:0}
+.mrow .mt{flex:1;font-size:15px}.mrow .bar{height:8px;background:rgba(0,0,0,.15);border-radius:5px;overflow:hidden;margin-top:4px}.mrow .bar i{display:block;height:100%;background:#3fae4a}
+/* carregamento */
+#loading{position:fixed;inset:0;z-index:100;background:linear-gradient(#ef7f6a,#f9c99b 55%,#93d150 56%,#5fa32f);transition:opacity .7s;display:flex;flex-direction:column;align-items:center}
+#loading.out{opacity:0;pointer-events:none}
+#ldCv{position:absolute;inset:0;width:100%;height:100%}
+.ldlogo{position:relative;margin-top:max(48px,9vh);width:min(86%,360px)}
+.ldlogo .l1{font-size:52px}.ldlogo .l2{font-size:68px}
+.ldbottom{position:absolute;left:0;right:0;bottom:max(36px,6vh);display:flex;flex-direction:column;align-items:center;gap:10px}
+.ldbar{width:min(78%,320px);height:26px;border-radius:16px;background:rgba(60,30,10,.55);border:4px solid var(--wood-dark);overflow:hidden;box-shadow:0 4px 0 rgba(0,0,0,.25)}
+#ldFill{height:100%;width:0;background:linear-gradient(#ffe97a,#f1a81c);border-radius:12px;transition:width .15s}
+#ldTip{font-family:'Baloo 2';font-size:18px;color:#fff;text-shadow:0 2px 0 var(--wood-dark),0 0 8px rgba(0,0,0,.4);text-align:center;padding:0 20px}

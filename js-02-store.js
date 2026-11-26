@@ -5,7 +5,8 @@ const defaultProfile = () => ({
   outfit: { head: null, face: null, neck: null, body: null, back: null },
   set: { music: true, musicVol: .6, sfx: true, sfxVol: .8, vib: true, quality: 'high', fx: true, hints: true, confirmWall: true },
   map: 'farm', diff: 'medium', mode: 'bots', n: 2,
-  stats: { games: 0, wins: 0, best: 0, walls: 0, earned: 0 }, tut: false, daily: { last: '', streak: 0 }, lastRoom: null
+  stats: { games: 0, wins: 0, best: 0, walls: 0, earned: 0 }, tut: false, daily: { last: '', streak: 0 }, lastRoom: null,
+  career: { best: 0, stars: {} }, puz: { stars: {} }, event: { id: '', wins: 0, done: 0 }, miss: { day: '', prog: {}, got: {} }
 });
 function loadProfile() {
   const d = defaultProfile();

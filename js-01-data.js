@@ -67,6 +67,10 @@ const CHARS = [
   { id: 'robo', name: 'Porcão Robô', price: 700, body: '#b8c4d0', ear: '#8e9cac', snout: '#6f7f90', ink: '#2c3a48', eyes: 'robot', mouth: 'grill', x: ['rivets', 'antenna'], pitch: .9, desc: 'Bip bip oinc.' },
   { id: 'rei', name: 'Rei Dourado', price: 1500, body: '#ffd84a', ear: '#f2b92a', snout: '#e69f10', ink: '#8a5a00', eyes: 'spiral', mouth: 'tongue', x: ['sparkle', 'kcrown'], pitch: .85, desc: 'Só os mais ricos têm.' }
 ];
+CHARS.push(
+  { id: 'dourado', name: 'Porco Louco Dourado', price: 99999, event: true, body: '#ffd54a', ear: '#f1b21c', snout: '#e89a10', ink: '#7a4b00', eyes: 'spiral', mouth: 'tongue', x: ['sparkle', 'kcrown'], pitch: 1.1, desc: 'Exclusivo do Desafio do Porco Louco!' },
+  { id: 'papai', name: 'Papai Porcoel', price: 99999, event: true, body: '#ff6b5e', ear: '#d94a40', snout: '#ffb3a8', ink: '#6e1a14', eyes: 'heart', mouth: 'smile', x: ['sparkle', 'cheeks'], pitch: .7, desc: 'Exclusivo do Natal dos Porcos!' }
+);
 const CHAR_BY_ID = Object.fromEntries(CHARS.map(c => [c.id, c]));
 
 // ---------- catálogo de roupas ----------

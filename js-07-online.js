@@ -54,10 +54,20 @@ const Net = {
     } else { await Net.req('PATCH', 'rooms/' + code + '/m/seats/' + me, { name: P.name, look: myLook(), bot: 0, left: null }); }
     Net.revOut = 0; Net.code = code; Net.me = me; Net.rev = -1; Net.room = null; Net.lastC = (r.c && r.c.k) | 0; P.lastRoom = code; save(); return code;
   },
-  start() { Net.stop(); const tick = async () => { await Net.poll(); Net.timer = setTimeout(tick, document.hidden ? 3000 : 850); }; tick(); },
-  stop() { clearTimeout(Net.timer); Net.timer = 0; },
+  start() {
+    Net.stop(); Net.es = null; Net.live = false;
+    const tick = async () => { await Net.poll(); Net.timer = setTimeout(tick, document.hidden ? 4000 : (Net.live ? 2500 : 850)); }; tick();
+    try { // canal ao vivo: o Firebase avisa na hora quando a sala muda
+      const es = new EventSource(Net.base() + '/rooms/' + Net.code + '.json'); Net.es = es;
+      es.onopen = () => { Net.live = true; };
+      es.onerror = () => { Net.live = false; };
+      const ping = () => { Net.poll(); };
+      es.addEventListener('put', ping); es.addEventListener('patch', ping);
+    } catch (e) { Net.live = false; }
+  },
+  stop() { clearTimeout(Net.timer); Net.timer = 0; if (Net.es) { try { Net.es.close(); } catch (e) { } Net.es = null; } },
   async poll() {
-    if (!Net.code || Net.busy) return; Net.busy = true;
+    if (!Net.code) return; if (Net.busy) { Net.again = true; return; } Net.busy = true;
     try {
       const r = Net.clean(await Net.req('GET', 'rooms/' + Net.code)); Net.fails = 0;
       if (!r) { Net.h.gone && Net.h.gone(); return; }
@@ -67,7 +77,7 @@ const Net = {
       Net.h.room && Net.h.room(r, prev);
       if (r.c && r.c.k !== Net.lastC) { const first = Net.lastC === 0 && !prev; Net.lastC = r.c.k; if (!first && r.c.seat !== Net.me) Net.h.chat && Net.h.chat(r.c); }
     } catch (e) { if (++Net.fails === 4) Net.h.offline && Net.h.offline(); }
-    finally { Net.busy = false; }
+    finally { Net.busy = false; if (Net.again) { Net.again = false; Net.poll(); } }
   },
   async patchM(p) { await Net.req('PATCH', 'rooms/' + Net.code + '/m', p); },
   async sendState(s) { const rev = Math.max(Net.revOut || 0, Net.room ? Net.room.rev : 0) + 1; Net.revOut = rev; await Net.req('PATCH', 'rooms/' + Net.code, { s: encState(s), rev }); },

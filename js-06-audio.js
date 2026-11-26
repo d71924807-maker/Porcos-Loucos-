@@ -55,6 +55,7 @@ const SND = {
   trophy() { [784, 988, 1175, 1568].forEach((f, i) => tone('triangle', f, f, .35, .25, i * .1)); noise(.5, .15, 0, 4000); },
   buy() { SND.coin(); tone('triangle', 1568, 2093, .2, .2, .2); },
   daily() { [523, 659, 784, 1047].forEach((f, i) => tone('triangle', f, f, .16, .25, i * .09)); },
+  boss() { tone('sawtooth', 110, 55, .6, .4, 0, 500, 5); tone('square', 220, 110, .5, .2, .2, 900); noise(.4, .2, .3, 0, 600); },
   rand() { const a = ['oink', 'grunt', 'squeal', 'boing']; SND[a[(Math.random() * a.length) | 0]](.9 + Math.random() * .5); }
 };
 const snd = (n, a) => { if (!AUD.ctx || !P.set.sfx) return; try { SND[n](a); } catch (e) { } };

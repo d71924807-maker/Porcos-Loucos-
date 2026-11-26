@@ -16,6 +16,7 @@
 </head>
 <body data-map="farm">
 <canvas id="sky"></canvas>
+<div id="loading"><canvas id="ldCv"></canvas><div class="logo ldlogo"><div class="l1">PORCOS</div><div class="l2">LOUCOS</div></div><div class="ldbottom"><div class="ldbar"><div id="ldFill"></div></div><div id="ldTip">Carregando…</div></div></div>
 <div id="toast" hidden></div>
 
 <!-- MENU -->
@@ -31,14 +32,20 @@
     <button class="btn big" id="bPlay">▶ Jogar</button>
     <button class="btn gift" id="bDaily" hidden>🎁 Presente do dia</button>
     <button class="btn" id="bResume" hidden>↩ Voltar para a sala online</button>
+    <button class="btn event" id="bEvent" hidden><span id="evT"></span><small id="evS"></small></button>
+    <div class="row2">
+      <button class="btn" id="bCareer">🏰 Carreira</button>
+      <button class="btn" id="bPuz">🧩 Puzzles</button>
+    </div>
     <div class="row2">
       <button class="btn" id="bShop">👕 Loja</button>
       <button class="btn" id="bMaps">🗺️ Mapas</button>
     </div>
     <div class="row2">
+      <button class="btn" id="bMiss">📋 Missões<i id="missBadge" class="badge" hidden></i></button>
       <button class="btn" id="bHow">❓ Como jogar</button>
-      <button class="btn" id="bSet">⚙️ Ajustes</button>
     </div>
+    <button class="btn" id="bSet">⚙️ Ajustes</button>
   </div>
 </section>
 
@@ -103,6 +110,32 @@
     <button class="btn ok" id="bPlace">✔ Colocar</button>
     <button class="btn" id="bCancelF">✖</button>
   </div>
+  <div class="ctrl" id="ctrlPuz" hidden>
+    <button class="btn" id="bPuzUndo">↩ Desfazer</button>
+    <button class="btn" id="bPuzReset">🔄 Reiniciar</button>
+    <button class="btn ok" id="bPuzFinish">✔ Terminar</button>
+  </div>
+</section>
+
+<!-- CARREIRA -->
+<section class="screen" id="s-career" hidden>
+  <div class="topbar"><button class="btn sm back" data-go="home">← Voltar</button><h2>Carreira</h2><div class="coins">🪙 <b>0</b></div></div>
+  <div class="card center" id="carSum"></div>
+  <div id="carList"></div>
+</section>
+
+<!-- PUZZLES -->
+<section class="screen" id="s-puz" hidden>
+  <div class="topbar"><button class="btn sm back" data-go="home">← Voltar</button><h2>Puzzles</h2><div class="coins">🪙 <b>0</b></div></div>
+  <div class="card center" id="puzSum"></div>
+  <div class="grid5" id="puzGrid"></div>
+</section>
+
+<!-- MISSÕES -->
+<section class="screen" id="s-miss" hidden>
+  <div class="topbar"><button class="btn sm back" data-go="home">← Voltar</button><h2>Missões</h2><div class="coins">🪙 <b>0</b></div></div>
+  <div class="card" id="missList"></div>
+  <p class="hint center">As missões mudam todo dia. Volte amanhã!</p>
 </section>
 
 <!-- LOJA -->
@@ -152,6 +185,10 @@
   <div class="rrew" id="rRew"></div>
   <button class="btn big" id="rAgain">🔄 Jogar de novo</button><button class="btn" id="rMenu">🏠 Menu</button>
 </div></div>
+<div class="modal" id="m-level" hidden><div class="sheet center">
+  <div class="mname" id="lvT"></div><div class="rpig"><canvas id="lvCv"></canvas></div><div id="lvInfo" class="rlines"></div>
+  <button class="btn big" id="lvGo">▶ Jogar</button><button class="btn" data-close="m-level">Voltar</button>
+</div></div>
 <div class="modal" id="m-name" hidden><div class="sheet center">
   <h2>Seu nome</h2><input id="nameIn" maxlength="12" autocomplete="off" placeholder="Torresmo">
   <button class="btn big" id="nameOk">Salvar</button><button class="btn" data-close="m-name">Cancelar</button>
@@ -167,6 +204,7 @@
 <script src="js-05-maps.js"></script>
 <script src="js-06-audio.js"></script>
 <script src="js-07-online.js"></script>
+<script src="js-07-career.js"></script>
 <script src="js-08-game.js"></script>
 <script src="js-09-ui.js"></script>
 </body>

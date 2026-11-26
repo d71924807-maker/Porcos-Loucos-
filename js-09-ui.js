@@ -1,6 +1,6 @@
 // ---------- telas, menus e inicialização ----------
 const view = { screen: 'home' };
-const SCREENS = ['home', 'setup', 'lobby', 'game', 'shop', 'maps', 'how', 'set'];
+const SCREENS = ['home', 'setup', 'lobby', 'game', 'shop', 'maps', 'how', 'set', 'career', 'puz', 'miss'];
 function showScreen(id) { SCREENS.forEach(s => { $('s-' + s).hidden = s !== id; }); view.screen = id; const e = $('s-' + id); if (e) e.scrollTop = 0; fxVisible(); }
 let toastT = 0;
 function toast(msg) { const t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, 2600); }
@@ -12,13 +12,15 @@ function refreshHome() {
   $('meName').textContent = P.name; const r = rankOf(P.trophies); $('meRank').textContent = '🏆 ' + r.name;
   $('rankFill').style.width = Math.round(r.pct * 100) + '%'; $('rankTxt').textContent = r.next ? P.trophies + ' / ' + r.to + ' → ' + r.next : P.trophies + ' troféus · nível máximo!';
   const d = dailyInfo(); $('bDaily').hidden = !d.avail; $('bDaily').textContent = '🎁 Presente do dia: +' + d.amount + ' 🪙';
-  $('bResume').hidden = !(P.lastRoom && Net.ok()); refreshCoins();
+  $('bResume').hidden = !(P.lastRoom && Net.ok());
+  const ev = activeEvent(); $('bEvent').hidden = !ev; if (ev) { const pr = eventProg(ev); $('evT').textContent = ev.emoji + ' ' + ev.name; $('evS').textContent = pr.done ? '✔ Prêmio conquistado! Jogue por moedas' : 'Vitórias ' + pr.wins + '/' + ev.goal + ' · faltam ' + eventDaysLeft(ev) + ' dias · prêmio exclusivo!'; }
+  const mc = missionClaimable(); $('missBadge').hidden = !mc; refreshCoins();
 }
 function goHome() {
   if (G) { G.on = false; G = null; }
   CUR_MAP = MAP_BY_ID[P.map]; applyTheme(P.map); musicPlay(CUR_MAP.music); refreshHome(); showScreen('home');
 }
-function leaveGame() { const online = G && G.mode === 'online'; if (online) Net.leave(); goHome(); }
+function leaveGame() { const online = G && G.mode === 'online', hub = G && G.hub; if (online) Net.leave(); goHome(); if (hub === 'career') openCareer(); else if (hub === 'puz') openPuz(); }
 
 // ---------- fundo (céu + clima) ----------
 const sky = $('sky'), fx = document.createElement('canvas'); fx.id = 'fx'; fx.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:2'; document.body.append(fx);
@@ -117,7 +119,7 @@ function buildShop() {
   const tabs = $('shTabs'); tabs.textContent = '';
   [{ id: 'ch', label: '🐷 Porcos' }].concat(SLOTS.map(s => ({ id: s.id, label: s.icon + ' ' + s.label }))).forEach(t => { const b = el('button', SH.tab === t.id ? 'on' : '', t.label); b.onclick = () => { SH.tab = t.id; SH.sel = null; snd('tap'); buildShop(); }; tabs.append(b); });
   const grid = $('shGrid'); grid.textContent = ''; const d = DPR();
-  const list = SH.tab === 'ch' ? CHARS : ITEMS.filter(i => i.slot === SH.tab);
+  const list = SH.tab === 'ch' ? CHARS.filter(c => !c.event || P.ownedCh[c.id]) : ITEMS.filter(i => i.slot === SH.tab);
   const none = SH.tab !== 'ch' ? el('div', 'cell', '') : null;
   if (none) { none.append(el('div', '', '🚫'), el('div', '', 'Tirar')); none.style.justifyContent = 'center'; none.onclick = () => { equipItem(SH.tab, null); SH.sel = null; snd('tap'); buildShop(); }; grid.append(none); }
   list.forEach(x => {
@@ -202,6 +204,88 @@ function buildChat() {
   PHRASES.forEach((x, i) => { const b = el('button', '', x); b.onclick = () => { sendChat(12 + i); $('m-chat').hidden = true; }; p.append(b); });
 }
 
+// ---------- carreira, puzzles, missões, evento ----------
+const LV = { look: null, kind: '' };
+function openInfo(o) {
+  $('lvT').textContent = o.title; LV.look = o.look; LV.win = o.win; const b = $('lvInfo'); b.textContent = '';
+  o.lines.forEach(l => { const d = el('div'); d.append(el('span', '', l[0]), el('b', '', l[1])); b.append(d); });
+  $('lvGo').onclick = () => { $('m-level').hidden = true; o.go(); }; $('m-level').hidden = false; snd('tap');
+}
+function openCareer() {
+  const box = $('carList'); box.textContent = ''; let total = 0; for (let i = 1; i <= 100; i++) total += careerStars(i);
+  $('carSum').textContent = '🏰 Fase atual: ' + Math.min(100, P.career.best + 1) + ' de 100 · ⭐ ' + total + '/300';
+  let curNode = null;
+  for (let w = 1; w <= 10; w++) {
+    box.append(el('div', 'world', 'Mundo ' + w + ' · ' + WORLDS[w - 1])); const gr = el('div', 'grid5');
+    for (let k = 1; k <= 10; k++) {
+      const lv = (w - 1) * 10 + k, c = careerCfg(lv), un = careerUnlocked(lv), st = careerStars(lv);
+      const n = el('button', 'node' + (c.boss ? ' boss' : '') + (un ? '' : ' lock') + (lv === P.career.best + 1 ? ' cur' : ''));
+      n.append(el('span', '', c.boss ? '👑' : String(lv)), el('small', '', un ? (st ? '⭐'.repeat(st) : '') : '🔒')); if (lv === P.career.best + 1) curNode = n;
+      n.onclick = () => { if (!un) { toast('Vença a fase anterior para liberar!'); snd('bad'); return; } openInfo({ title: (c.boss ? '👑 CHEFE · ' : 'Fase ' + lv + ' · ') + c.worldName, look: c.look, win: false, go: () => startCareer(lv),
+        lines: [['Adversário', c.name], ['Dificuldade', { easy: 'Fácil 😴', medium: 'Médio 🙂', hard: 'Difícil 😈' }[c.diff]], ['Cercas dele', c.oppF], ['Obstáculos', c.obst], ['Prêmio', c.coins + ' 🪙' + (c.boss ? ' + item' : '')], ['Suas estrelas', st ? '⭐'.repeat(st) : '—']] }); };
+      gr.append(n);
+    }
+    box.append(gr);
+  }
+  showScreen('career'); if (curNode) setTimeout(() => curNode.scrollIntoView({ block: 'center' }), 50);
+}
+function openPuz() {
+  const g = $('puzGrid'); g.textContent = ''; let total = 0;
+  for (let i = 1; i <= PUZZLES; i++) {
+    const st = P.puz.stars[i] | 0, un = puzzleUnlocked(i); total += st;
+    const n = el('button', 'node' + (un ? '' : ' lock') + (un && !st ? ' cur' : '')); n.append(el('span', '', puzzleKind(i) === 'maze' ? '🌀' + i : '🚧' + i), el('small', '', un ? (st ? '⭐'.repeat(st) : '') : '🔒'));
+    n.onclick = () => { if (!un) { toast('Resolva o anterior para liberar!'); snd('bad'); return; } snd('tap'); startPuzzle(i); }; g.append(n);
+  }
+  $('puzSum').innerHTML = ''; $('puzSum').append('🧩 Labirintos 🌀: chegue no menor nº de jogadas. Bloqueios 🚧: faça o rival andar o máximo! ⭐ ' + total + '/' + PUZZLES * 3);
+  showScreen('puz');
+}
+function openMissions() {
+  const box = $('missList'); box.textContent = '';
+  todayMissions().forEach(m => {
+    const pr = Math.min(P.miss.prog[m.kind] || 0, m.n), r = el('div', 'mrow'), t = el('div', 'mt'); t.append(el('div', '', m.t + '  (' + pr + '/' + m.n + ')')); const bar = el('div', 'bar'), i = el('i'); i.style.width = Math.round(pr / m.n * 100) + '%'; bar.append(i); t.append(bar);
+    const done = pr >= m.n, got = P.miss.got[m.id], b = el('button', 'btn sm' + (done && !got ? ' ok' : ''), got ? '✔' : '+' + m.coins + ' 🪙'); b.disabled = !done || got;
+    b.onclick = () => { const c = claimMission(m.id); if (c) { snd('daily'); toast('+' + c + ' 🪙 resgatadas!'); openMissions(); } }; r.append(t, b); box.append(r);
+  });
+  showScreen('miss');
+}
+function openEventInfo() {
+  const e = activeEvent(); if (!e) return; const pr = eventProg(e), ch = CHAR_BY_ID[e.reward.ch];
+  openInfo({ title: e.emoji + ' ' + e.name, look: seededLook(mulberry(99), e.bossCh, true), win: false, go: startEvent,
+    lines: [['Missão', 'Vença o ' + e.bossName + ' ' + e.goal + 'x'], ['Seu progresso', pr.wins + '/' + e.goal], ['Regra maluca', 'a cada 6 jogadas surge uma cerca surpresa 🌀'], ['Prêmio exclusivo', ch.name + ' + ' + e.reward.coins + ' 🪙'], ['Termina em', eventDaysLeft(e) + ' dias']] });
+}
+
+// ---------- tela de carregamento ----------
+function runLoading() {
+  const ld = $('loading'), cv = $('ldCv'), fill = $('ldFill'), tip = $('ldTip'), rnd = mulberry(4242);
+  const tips = ['Alimentando os porcos…', 'Lavando a lama…', 'Montando as cercas…', 'Ensinando o pulo maluco…', 'Polindo a taça…', 'Acordando o Rei Porco…', 'Escondendo o bacon…', 'Afinando os oinks…'];
+  const pigs = CHARS.filter(c => !c.event).map((c, i) => ({ look: seededLook(rnd, c.id, false), x: -i * .16, sp: .09 + rnd() * .05, ph: rnd() * 6, sz: .17 + rnd() * .05 }));
+  let fontsOk = false; try { document.fonts.ready.then(() => { fontsOk = true; }); } catch (e) { fontsOk = true; }
+  const tasks = [() => { }, ...MAPS.map(m => () => boardBg(m, 360, DPR(), 2)), ...CHARS.map(c => () => thumb('ch', c.id, 90, DPR())), () => { }];
+  let idx = 0; const t0 = performance.now(); let shown = 0, last = t0, ti = 0;
+  const step = () => { if (idx < tasks.length) { try { tasks[idx](); } catch (e) { } idx++; setTimeout(step, 40); } }; setTimeout(step, 60);
+  const W0 = () => innerWidth, H0 = () => innerHeight;
+  function loop(now) {
+    const dt = Math.min(.05, (now - last) / 1000); last = now; const el_ = now - t0, W = W0(), H = H0(), d = Math.min(devicePixelRatio || 1, 2);
+    if (cv._k !== W + 'x' + H) { cv.width = Math.round(W * d); cv.height = Math.round(H * d); cv._k = W + 'x' + H; }
+    const g = cv.getContext('2d'); g.setTransform(d, 0, 0, d, 0, 0); g.clearRect(0, 0, W, H); const t = el_ / 1000;
+    g.save(); g.translate(W / 2, H * .5); g.rotate(t * .15); for (let i = 0; i < 16; i++) { g.rotate(TAU / 16); g.fillStyle = 'rgba(255,255,255,.17)'; g.beginPath(); g.moveTo(0, 0); g.lineTo(-W * .1, -H); g.lineTo(W * .1, -H); g.fill(); } g.restore();
+    const sx = W * .78, sy = H * .3, sg = g.createRadialGradient(sx, sy, 0, sx, sy, W * .35); sg.addColorStop(0, 'rgba(255,245,190,.95)'); sg.addColorStop(1, 'rgba(255,230,150,0)'); g.fillStyle = sg; g.fillRect(0, 0, W, H);
+    g.fillStyle = '#fff6c9'; g.beginPath(); g.arc(sx, sy, W * .09, 0, TAU); g.fill();
+    for (const [x, y, sc, sp] of [[.2, .26, 1, 14], [.6, .34, .8, 9], [.9, .2, .7, 11]]) cloud(g, ((x * W + t * sp) % (W + 200)) - 80, y * H, 50 * sc, .9);
+    const gy = H * .66; g.fillStyle = '#7fc043'; g.beginPath(); g.moveTo(0, gy); g.quadraticCurveTo(W * .3, gy - 40, W * .6, gy - 10); g.quadraticCurveTo(W * .85, gy + 10, W, gy - 24); g.lineTo(W, H); g.lineTo(0, H); g.fill();
+    g.fillStyle = '#93d150'; g.beginPath(); g.moveTo(0, gy + 30); g.quadraticCurveTo(W * .4, gy + 4, W, gy + 34); g.lineTo(W, H); g.lineTo(0, H); g.fill();
+    // cerca ao fundo
+    g.strokeStyle = '#7e4a20'; g.lineWidth = 5; g.lineCap = 'round'; const fy = gy + 18; g.beginPath(); g.moveTo(0, fy); g.lineTo(W, fy); g.moveTo(0, fy + 14); g.lineTo(W, fy + 14); g.stroke(); for (let x = 10; x < W; x += 44) { g.beginPath(); g.moveTo(x, fy - 12); g.lineTo(x, fy + 28); g.stroke(); }
+    // porcos correndo
+    pigs.forEach((p, i) => { p.x += p.sp * dt; if (p.x > 1.2) p.x = -.2; const px = p.x * W, bob = Math.abs(Math.sin(t * 8 + p.ph)), py = gy + 78 + (i % 3) * 22 - bob * 14; g.fillStyle = 'rgba(0,0,0,.22)'; g.beginPath(); g.ellipse(px, gy + 78 + (i % 3) * 22 + 20, W * p.sz * .33, 6, 0, 0, TAU); g.fill(); g.save(); g.translate(px, py); g.rotate(Math.sin(t * 8 + p.ph) * .08); drawPig(g, 0, 0, W * p.sz, p.look, t, { phase: p.ph }); g.restore(); });
+    const target = Math.min(idx / tasks.length, el_ / 2600); shown += (target - shown) * Math.min(1, dt * 6); fill.style.width = Math.round(shown * 100) + '%';
+    if (el_ > (ti + 1) * 850) { ti++; tip.textContent = tips[ti % tips.length]; } else if (!ti) tip.textContent = tips[0];
+    if ((shown > .985 && fontsOk) || el_ > 5000) { ld.classList.add('out'); setTimeout(() => { ld.remove(); }, 800); return; }
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+}
+
 // ---------- cena da capa ----------
 function homeScene(g, w, h, t) {
   const m = CUR_MAP, cx = w / 2;
@@ -239,6 +323,7 @@ function frame(ts) {
   else if (v === 'maps') { const S = Math.round(clamp(innerWidth - 110, 200, 360)), cv = $('mapCv'); cv.style.width = cv.style.height = S + 'px'; const d = DPR(); if (cv._k !== S + ':' + d) { cv.width = cv.height = Math.round(S * d); cv._k = S + ':' + d; } MV.st.turn = 0; const looks = [myLook(), { ch: 'bacon', o: {} }]; drawBoard(cv.getContext('2d'), S, { map: MAPS[MV.i], st: MV.st, q: 0, t: T, dpr: d, hints: null, ghost: null, disp: MV.st.p.map(p => ({ x: p.c, y: p.r })), looks, fxOn: P.set.fx, low }); }
   else if (v === 'how' && HW.cur) { const S = Math.round(clamp(innerWidth - 70, 200, 330)), cv = $('howCv'); cv.style.width = cv.style.height = S + 'px'; const d = DPR(); if (cv._k !== S + ':' + d) { cv.width = cv.height = Math.round(S * d); cv._k = S + ':' + d; } const c = HW.cur; c.floats && c.floats.forEach(f => { f.age = .3 + .2 * Math.sin(T * 2); }); drawBoard(cv.getContext('2d'), S, { map: CUR_MAP, st: c.s, q: 0, t: T, dpr: d, hints: c.hints, ghost: c.ghost, disp: HW.disp, looks: HOW_LOOKS(), floats: c.floats, bubbles: c.bubbles, fxOn: false, low }); }
   else if (v === 'lobby') lobPigs.forEach(p => { const w = 72, g = ctxOf(p.cv, w, w); drawPig(g, w / 2, w * .55, w * .72, p.look, T, { ring: SEATS[p.i].color }); });
+  if (!$('m-level').hidden && LV.look) { const cv = $('lvCv'), g = ctxOf(cv, 130, 130); drawPig(g, 65, 72, 90, LV.look, T, { active: true }); }
   if (!$('m-result').hidden && G) { const cv = $('rCv'), g = ctxOf(cv, 130, 130); if (G.resLook) drawPig(g, 65, 72, 90, G.resLook, T, { active: true, ring: SEATS[G.resWin].color }); }
   if (G && G.on && view.screen === 'game' && !$('m-result').hidden && G.confetti.length) { /* confete desenhado no tabuleiro */ }
 }
@@ -257,6 +342,9 @@ function wire() {
   $('nameIn').addEventListener('keydown', e => { if (e.key === 'Enter') $('nameOk').click(); });
   $('bDaily').onclick = () => { const a = claimDaily(); if (a) { snd('daily'); toast('+' + a + ' 🪙 de presente! Volte amanhã.'); } refreshHome(); };
   $('bResume').onclick = () => joinCode(P.lastRoom);
+  $('bCareer').onclick = () => { snd('tap'); openCareer(); }; $('bPuz').onclick = () => { snd('tap'); openPuz(); };
+  $('bMiss').onclick = () => { snd('tap'); openMissions(); }; $('bEvent').onclick = () => { snd('tap'); openEventInfo(); };
+  $('bPuzUndo').onclick = undoPuzzle; $('bPuzReset').onclick = resetPuzzle; $('bPuzFinish').onclick = finishPuzzle;
   $('bMapsBack').onclick = () => { applyTheme(P.map); CUR_MAP = MAP_BY_ID[P.map]; musicPlay(CUR_MAP.music); goHome(); };
   $('mPrev').onclick = () => showMapView(MV.i - 1); $('mNext').onclick = () => showMapView(MV.i + 1);
   $('bUseMap').onclick = () => { P.map = MAPS[MV.i].id; save(); showMapView(MV.i); toast('Mapa escolhido! ✔'); };
@@ -277,7 +365,7 @@ function wire() {
   $('pgRestart').onclick = () => { $('m-pause').hidden = true; if (G.mode === 'online') Net.startGame().catch(() => toast('Falha ao recomeçar')); else startLocalGame(G.mode, G.n, G.map, G.diff); };
   $('pgQuit').onclick = () => { $('m-pause').hidden = true; if (G.over) leaveGame(); else ask('Sair da partida?', leaveGame); };
   $('bChat').onclick = () => { if (!G) return; G.unread = 0; $('chatBadge').hidden = true; renderChatLog(); $('m-chat').hidden = false; };
-  $('rAgain').onclick = () => { $('m-result').hidden = true; if (G.mode === 'online') Net.startGame().catch(() => toast('Falha ao recomeçar')); else startLocalGame(G.mode, G.n, G.map, G.diff); };
+  $('rAgain').onclick = () => { $('m-result').hidden = true; if (G.again) G.again(); else if (G.mode === 'online') Net.startGame().catch(() => toast('Falha ao recomeçar')); else startLocalGame(G.mode, G.n, G.map, G.diff); };
   $('rMenu').onclick = () => { $('m-result').hidden = true; leaveGame(); };
   document.addEventListener('pointerdown', () => { if (!AUD.ctx) { audInit(); if (AUD.ctx) musicPlay(CUR_MAP.music); } else if (AUD.ctx.state === 'suspended') AUD.ctx.resume(); }, { capture: true });
 }
@@ -287,7 +375,7 @@ function pauseLabels() {
 }
 function init() {
   applyTheme(P.map); CUR_MAP = MAP_BY_ID[P.map]; resize(); buildChat(); initSetup(); wire(); refreshHome(); showScreen('home'); fxVisible();
-  requestAnimationFrame(frame);
+  requestAnimationFrame(frame); runLoading();
   const m = /^#sala-([A-Za-z0-9]{5})$/.exec(location.hash);
   if (m && Net.ok()) { history.replaceState(null, '', location.pathname); P.mode = 'online'; joinCode(m[1]); }
   else if (!P.tut) openHow();

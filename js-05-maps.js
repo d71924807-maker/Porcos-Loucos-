@@ -57,6 +57,15 @@ function boardBg(map, S, dpr, n) {
     const gr = g.createRadialGradient(4.5 * cell, 4.5 * cell, 0, 4.5 * cell, 4.5 * cell, cell * 1.1);
     gr.addColorStop(0, 'rgba(255,225,90,.75)'); gr.addColorStop(1, 'rgba(255,225,90,0)'); g.fillStyle = gr; g.fillRect(3.4 * cell, 3.4 * cell, cell * 2.2, cell * 2.2);
   }
+  // luz e textura
+  for (let r = 0; r < 9; r++) for (let c = 0; c < 9; c++) {
+    const x = c * cell, y = r * cell;
+    g.fillStyle = 'rgba(255,255,255,.14)'; g.fillRect(x, y, cell, Math.max(1, cell * .035)); g.fillRect(x, y, Math.max(1, cell * .035), cell);
+    g.fillStyle = 'rgba(0,0,0,.10)'; g.fillRect(x, y + cell - Math.max(1, cell * .035), cell, Math.max(1, cell * .035)); g.fillRect(x + cell - Math.max(1, cell * .035), y, Math.max(1, cell * .035), cell);
+    for (let k = 0; k < 7; k++) { g.fillStyle = rnd() < .5 ? 'rgba(255,255,255,.07)' : 'rgba(0,0,0,.06)'; g.fillRect(x + rnd() * cell, y + rnd() * cell, 1 + rnd() * 2.5, 1 + rnd() * 2.5); }
+  }
+  const vg = g.createRadialGradient(S / 2, S / 2, S * .32, S / 2, S / 2, S * .78); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.28)'); g.fillStyle = vg; g.fillRect(0, 0, S, S);
+  const lg = g.createLinearGradient(0, 0, S, S); lg.addColorStop(0, 'rgba(255,255,230,.12)'); lg.addColorStop(.5, 'rgba(255,255,230,0)'); lg.addColorStop(1, 'rgba(0,0,0,.08)'); g.fillStyle = lg; g.fillRect(0, 0, S, S);
   _bgCache.set(key, cv); return cv;
 }
 
@@ -66,10 +75,12 @@ function drawFence(g, cell, o, r, c, owner, alpha, bad, map) {
   const gap = cell * .08, th = cell * .13; let x1, y1, x2, y2;
   if (o === 'h') { y1 = y2 = (r + 1) * cell; x1 = c * cell + gap; x2 = (c + 2) * cell - gap; } else { x1 = x2 = (c + 1) * cell; y1 = r * cell + gap; y2 = (r + 2) * cell - gap; }
   g.lineCap = 'round';
+  g.strokeStyle = 'rgba(0,0,0,.3)'; g.lineWidth = th + 3; g.beginPath(); g.moveTo(x1 + 2, y1 + 4); g.lineTo(x2 + 2, y2 + 4); g.stroke();
   g.strokeStyle = map.css.woodDark; g.lineWidth = th + 3; g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke();
   g.strokeStyle = bad ? '#e0443f' : map.css.woodLight; g.lineWidth = th; g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke();
+  if (!bad) { g.strokeStyle = 'rgba(60,30,10,.28)'; g.lineWidth = Math.max(1, th * .12); g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke(); const nx = o === 'h' ? 0 : -th * .28, ny = o === 'h' ? -th * .28 : 0; g.strokeStyle = 'rgba(255,255,255,.3)'; g.beginPath(); g.moveTo(x1 + nx, y1 + ny); g.lineTo(x2 + nx, y2 + ny); g.stroke(); }
   if (map.id === 'xmas' && !bad) { g.setLineDash([th * .8, th * .8]); g.strokeStyle = 'rgba(255,255,255,.9)'; g.lineWidth = th * .55; g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke(); g.setLineDash([]); }
-  const cap = owner ? SEATS[owner - 1].color : '#fff';
+  const cap = owner && SEATS[owner - 1] ? SEATS[owner - 1].color : owner ? '#bfb39a' : '#fff';
   for (let i = 0; i < 3; i++) {
     const px = x1 + (x2 - x1) * i / 2, py = y1 + (y2 - y1) * i / 2;
     g.fillStyle = bad ? '#e0443f' : cap; g.strokeStyle = map.css.woodDark; g.lineWidth = 2;
@@ -180,7 +191,9 @@ function drawBoard(g, S, o) {
   // porcos: sempre em pé, na ordem de profundidade da tela
   const vp = [], N2 = st.n; for (let i = 0; i < N2; i++) { const d = o.disp[i]; const [vx, vy] = rotPt(d.x + .5, d.y + .5, q); vp.push({ i, vx, vy }); }
   vp.sort((a, b) => a.vy - b.vy);
-  for (const v of vp) drawPig(g, v.vx * cell, v.vy * cell + cell * .1, cell * .85, o.looks[v.i], t, { ring: SEATS[v.i].color, active: st.winner < 0 && st.turn === v.i, phase: v.i * 1.9, rot: 0 });
+  for (const v of vp) { const z = (o.disp[v.i].z || 0); g.save(); g.fillStyle = `rgba(0,0,0,${.28 - z * .4})`; g.beginPath(); g.ellipse(v.vx * cell, v.vy * cell + cell * .33, cell * (.27 - z * .2), cell * .085, 0, 0, TAU); g.fill(); g.restore(); }
+  if (o.dust) for (const d of o.dust) { const [dx, dy] = rotPt(d.x, d.y, q), a = Math.max(0, 1 - d.age); g.fillStyle = `rgba(${map.id === 'xmas' ? '255,255,255' : '225,205,170'},${a * .55})`; for (const k of [-1, 0, 1]) { g.beginPath(); g.arc((dx + k * (.12 + d.age * .18)) * cell, (dy - d.age * .12) * cell, cell * (.05 + d.age * .09), 0, TAU); g.fill(); } }
+  for (const v of vp) drawPig(g, v.vx * cell, v.vy * cell + cell * .06 - (o.disp[v.i].z || 0) * cell, cell * .68, o.looks[v.i], t, { ring: SEATS[v.i].color, active: st.winner < 0 && st.turn === v.i, phase: v.i * 1.9, rot: 0 });
   if (o.fxOn !== false && map.weather) weatherParticles(g, S, S, t, map.weather, o.low, .7);
   // pontos voando e balões de chat
   for (const f of (o.floats || [])) { const [fx, fy] = rotPt(f.x, f.y, q), k = f.age; g.save(); g.globalAlpha = Math.max(0, 1 - k * k); g.font = `800 ${Math.round(cell * .38)}px Nunito, sans-serif`; g.textAlign = 'center'; g.lineWidth = 4; g.strokeStyle = 'rgba(60,30,10,.85)'; g.fillStyle = f.color || '#ffe14d'; g.strokeText(f.text, fx * cell, (fy - k * .9) * cell); g.fillText(f.text, fx * cell, (fy - k * .9) * cell); g.restore(); }
@@ -188,7 +201,7 @@ function drawBoard(g, S, o) {
     const v = vp.find(p => p.i === b.i); if (!v) continue;
     const emoji = b.text.length <= 3, fs = Math.round(cell * (emoji ? .5 : .27)); g.font = `800 ${fs}px Nunito, sans-serif`;
     const w = Math.min(S - 8, g.measureText(b.text).width + cell * .4), h = cell * (emoji ? .62 : .44);
-    let bx = clamp(v.vx * cell - w / 2, 4, S - w - 4), by = v.vy * cell - cell * .95 - h; const below = by < 2; if (below) by = v.vy * cell + cell * .5;
+    let bx = clamp(v.vx * cell - w / 2, 4, S - w - 4), by = v.vy * cell - cell * .82 - h; const below = by < 2; if (below) by = v.vy * cell + cell * .5;
     g.save(); g.globalAlpha = Math.min(1, b.left * 3); g.fillStyle = '#fff'; g.strokeStyle = SEATS[b.i].color; g.lineWidth = 2.5; g.beginPath(); g.roundRect(bx, by, w, h, h * .4); g.fill(); g.stroke();
     const tx = clamp(v.vx * cell, bx + 8, bx + w - 8); g.beginPath(); if (below) { g.moveTo(tx - 5, by + .5); g.lineTo(tx, by - 6); g.lineTo(tx + 5, by + .5); } else { g.moveTo(tx - 5, by + h - .5); g.lineTo(tx, by + h + 6); g.lineTo(tx + 5, by + h - .5); } g.fillStyle = '#fff'; g.fill(); g.stroke();
     g.fillStyle = '#4a2a14'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(b.text, bx + w / 2, by + h / 2 + 1); g.restore();
