@@ -192,6 +192,9 @@ function buildSettings() {
   row('🌧️ Efeitos de clima', tog('fx')); row('💡 Dicas de movimento', tog('hints')); row('🚧 Confirmar cerca', tog('confirmWall'));
   const hb = el('button', 'btn sm', 'Ver'); hb.onclick = openHow; row('Tutorial', hb);
   const rb = el('button', 'btn sm', 'Zerar'); rb.style.background = '#c0392b'; rb.onclick = () => ask('Apagar moedas, roupas e troféus deste aparelho?', () => { Object.assign(P, defaultProfile()); saveNow(); location.reload(); }); row('Reiniciar progresso', rb);
+  const SITE = 'https://d71924807-maker.github.io/Porcos-Loucos-/site.html';
+  const lk = (t, h) => { const b = el('button', 'btn sm', t); b.onclick = () => window.open(SITE + h, '_blank', 'noopener'); return b; };
+  row('Privacidade', lk('Ler', '#privacidade')); row('Termos de uso', lk('Ler', '#termos')); row('Contato e ajuda', lk('Abrir', '#contato'));
   const st = el('div', 'small', 'Partidas: ' + P.stats.games + ' · Vitórias: ' + P.stats.wins + ' · Melhor: ' + P.stats.best + ' pts · Cercas: ' + P.stats.walls); st.style.marginTop = '8px'; box.append(st);
   box.append(el('div', 'small', 'Porcos Loucos v2'));
 }
