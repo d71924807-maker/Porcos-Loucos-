@@ -1,5 +1,5 @@
 // Service worker: deixa o jogo abrir sem internet. As salas online (Firebase) nunca passam pelo cache.
-const CACHE = "porcos-loucos-v12";
+const CACHE = "porcos-loucos-v13";
 const ARQUIVOS = ["./", "index.html", "style.css", "config.js", "manifest.webmanifest", "icon-192.png", "icon-512.png", "icon-maskable-512.png", "js-00-util.js","js-01-data.js","js-02-store.js","js-03-engine.js","js-04-pig.js","js-05-maps.js","js-06-audio.js","js-07-career.js","js-07-online.js","js-08-game.js","js-09-ui.js"];
 
 const PERMITIDOS = new Set(ARQUIVOS.map(a => new URL(a, self.registration.scope).pathname));
